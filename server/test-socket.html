@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socket.IO Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .connected { background: #d4edda; color: #155724; }
+    .disconnected { background: #f8d7da; color: #721c24; }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    #log {
+      height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #007bff;
+      background: #f8f9fa;
+    }
+  </style>
+</head>
+<body>
+  <h1>Socket.IO Connection Test</h1>
+  
+  <div id="status" class="status disconnected">
+    Status: Disconnected
+  </div>
+
+  <div>
+    <h3>Room Controls</h3>
+    <input type="text" id="roomId" placeholder="Room ID" value="test-room">
+    <input type="text" id="username" placeholder="Username" value="TestUser">
+    <br><br>
+    <button onclick="joinRoom()">Join Room</button>
+    <button onclick="leaveRoom()">Leave Room</button>
+    <button onclick="clearCanvas()">Clear Canvas</button>
+  </div>
+
+  <div>
+    <h3>Drawing Test</h3>
+    <button onclick="testDrawing()">Test Drawing</button>
+    <button onclick="testCursor()">Test Cursor</button>
+  </div>
+
+  <div>
+    <h3>Event Log</h3>
+    <button onclick="clearLog()">Clear Log</button>
+    <div id="log"></div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <script>
+    let socket;
+    let currentRoom = null;
+
+    function log(message, data = null) {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+      if (data) {
+        entry.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      }
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+
+    function updateStatus(connected) {
+      const statusDiv = document.getElementById('status');
+      if (connected) {
+        statusDiv.className = 'status connected';
+        statusDiv.textContent = `Status: Connected (${socket.id})`;
+      } else {
+        statusDiv.className = 'status disconnected';
+        statusDiv.textContent = 'Status: Disconnected';
+      }
+    }
+
+    // Initialize socket connection
+    socket = io('http://localhost:5000', {
+      transports: ['websocket', 'polling']
+    });
+
+    socket.on('connect', () => {
+      log('✅ Connected to server');
+      updateStatus(true);
+    });
+
+    socket.on('disconnect', () => {
+      log('❌ Disconnected from server');
+      updateStatus(false);
+    });
+
+    socket.on('connected', (data) => {
+      log('Server confirmed connection', data);
+    });
+
+    socket.on('room-joined', (data) => {
+      log('✅ Joined room successfully', data);
+      currentRoom = data.roomId;
+    });
+
+    socket.on('user-joined', (data) => {
+      log('👤 User joined', data);
+    });
+
+    socket.on('user-left', (data) => {
+      log('👤 User left', data);
+    });
+
+    socket.on('users-update', (data) => {
+      log('👥 Users updated', data);
+    });
+
+    socket.on('drawing-update', (data) => {
+      log('✏️ Drawing update', data);
+    });
+
+    socket.on('canvas-cleared', (data) => {
+      log('🗑️ Canvas cleared', data);
+    });
+
+    socket.on('cursor-position', (data) => {
+      log('🖱️ Cursor moved', data);
+    });
+
+    socket.on('error', (data) => {
+      log('❌ Error received', data);
+    });
+
+    function joinRoom() {
+      const roomId = document.getElementById('roomId').value;
+      const username = document.getElementById('username').value;
+
+      socket.emit('join-room', {
+        roomId,
+        username,
+        cursorColor: '#FF0000'
+      });
+
+      log(`Attempting to join room: ${roomId} as ${username}`);
+    }
+
+    function leaveRoom() {
+      if (!currentRoom) {
+        log('Not in any room');
+        return;
+      }
+
+      socket.emit('leave-room', {
+        roomId: currentRoom
+      });
+
+      log(`Leaving room: ${currentRoom}`);
+      currentRoom = null;
+    }
+
+    function clearCanvas() {
+      if (!currentRoom) {
+        log('Not in any room');
+        return;
+      }
+
+      socket.emit('clear-canvas', {
+        roomId: currentRoom
+      });
+
+      log('Clearing canvas');
+    }
+
+    function testDrawing() {
+      if (!currentRoom) {
+        log('Not in any room');
+        return;
+      }
+
+      const action = {
+        id: 'test-' + Date.now(),
+        type: 'draw',
+        tool: 'pen',
+        coordinates: [
+          { x: 100, y: 100 },
+          { x: 150, y: 150 },
+          { x: 200, y: 100 }
+        ],
+        color: '#000000',
+        lineWidth: 2,
+        userId: socket.id,
+        username: document.getElementById('username').value
+      };
+
+      socket.emit('drawing-start', {
+        roomId: currentRoom,
+        action
+      });
+
+      setTimeout(() => {
+        socket.emit('drawing-end', {
+          roomId: currentRoom,
+          action
+        });
+      }, 100);
+
+      log('Sent test drawing');
+    }
+
+    function testCursor() {
+      if (!currentRoom) {
+        log('Not in any room');
+        return;
+      }
+
+      const x = Math.floor(Math.random() * 500);
+      const y = Math.floor(Math.random() * 500);
+
+      socket.emit('cursor-move', {
+        roomId: currentRoom,
+        x,
+        y
+      });
+
+      log(`Cursor moved to (${x}, ${y})`);
+    }
+  </script>
+</body>
+</html>
