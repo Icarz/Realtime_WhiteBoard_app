@@ -1,8 +1,10 @@
 import Drawing from '../../models/Drawing.js';
 import logger from '../../utils/logger.js';
+import socketDebugger from '../../utils/socketDebug.js';
 import roomManager from '../roomManager.js';
 
 export const handleDrawingStart = async (io, socket, data) => {
+   socketDebugger.logEvent('drawing-start', socket.id, data);
   try {
     const { roomId, action } = data;
 

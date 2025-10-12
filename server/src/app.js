@@ -9,6 +9,8 @@ import { apiLimiter } from './middleware/rateLimiter.js';
 import roomRoutes from './routes/roomRoutes.js';
 import drawingRoutes from './routes/drawingRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import monitorRoutes from './routes/monitorRoutes.js';
+import debugRoutes from './routes/debugRoutes.js';
 
 const app = express();
 
@@ -41,6 +43,12 @@ app.get('/health', (req, res) => {
 app.use('/api/rooms', roomRoutes);
 app.use('/api/drawings', drawingRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/monitor', monitorRoutes); 
+
+// Add this route (only in development)
+if (process.env.NODE_ENV === 'development') {
+  app.use('/api/debug', debugRoutes);
+}
 
 // 404 handler
 app.use(notFound);
