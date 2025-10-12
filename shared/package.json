@@ -1,0 +1,10 @@
+{
+  "name": "whiteboard-shared",
+  "version": "1.0.0",
+  "description": "Shared constants and types for whiteboard app",
+  "main": "index.js",
+  "type": "module",
+  "keywords": [],
+  "author": "MOHAMMED RERHAYE",
+  "license": "MIT"
+}
