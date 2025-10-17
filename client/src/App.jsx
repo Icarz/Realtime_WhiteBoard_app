@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { WhiteboardProvider } from '@context/WhiteboardContext';
 import { AuthProvider } from '@context/AuthContext';
+import { SocketProvider } from '@context/SocketContext'; 
 import Home from '@pages/Home';
 import WhiteboardRoom from '@pages/WhiteboardRoom';
 import NotFound from '@pages/NotFound';
